@@ -46,3 +46,20 @@ async fn doesnt_call_finish() {
         example.do_something().await;
     }
 }
+
+#[tokio::test]
+#[should_panic(expected = "the Disco")]
+async fn unwinds() {
+    let mut num = 0;
+
+    {
+        let mut example = AsyncDropper::new(Example(&mut num));
+
+        if true {
+            panic!("the Disco");
+        }
+
+        example.do_something().await;
+        example.finish().await;
+    }
+}
