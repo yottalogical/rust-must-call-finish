@@ -1,26 +1,43 @@
-pub struct Example {
+use async_trait::async_trait;
+
+#[async_trait]
+pub trait AsyncDrop {
+    async fn async_drop(&mut self);
+}
+
+pub struct AsyncDropper<T: AsyncDrop> {
+    item: T,
     finished: bool,
 }
 
-impl Example {
-    pub fn new() -> Self {
-        Example { finished: false }
+impl<T: AsyncDrop> AsyncDropper<T> {
+    pub fn new(item: T) -> Self {
+        Self {
+            finished: false,
+            item,
+        }
     }
-
-    pub fn do_something(&self) {}
 
     pub async fn finish(mut self) {
-        self.async_drop().await;
+        self.item.async_drop().await;
         self.finished = true;
     }
-
-    async fn async_drop(&mut self) {}
 }
 
-impl Drop for Example {
+impl<T: AsyncDrop> std::ops::Deref for AsyncDropper<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.item
+    }
+}
+
+impl<T: AsyncDrop> Drop for AsyncDropper<T> {
     fn drop(&mut self) {
-        if !self.finished {
-            futures::executor::block_on(self.async_drop());
+        if !self.finished && !std::thread::panicking() {
+            panic!(
+                "AsyncDropper must not be dropped implicitly. Instead call AsyncDropper::finish."
+            );
         }
     }
 }
