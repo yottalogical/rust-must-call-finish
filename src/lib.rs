@@ -1,3 +1,6 @@
+use std::ops::{Deref, DerefMut};
+use std::thread::panicking;
+
 use async_trait::async_trait;
 
 #[async_trait]
@@ -24,7 +27,7 @@ impl<T: AsyncDrop> AsyncDropper<T> {
     }
 }
 
-impl<T: AsyncDrop> std::ops::Deref for AsyncDropper<T> {
+impl<T: AsyncDrop> Deref for AsyncDropper<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -32,11 +35,17 @@ impl<T: AsyncDrop> std::ops::Deref for AsyncDropper<T> {
     }
 }
 
+impl<T: AsyncDrop> DerefMut for AsyncDropper<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.item
+    }
+}
+
 impl<T: AsyncDrop> Drop for AsyncDropper<T> {
     fn drop(&mut self) {
-        if !self.finished && !std::thread::panicking() {
+        if !self.finished && !panicking() {
             panic!(
-                "AsyncDropper must not be dropped implicitly. Instead call AsyncDropper::finish."
+                "AsyncDropper must not be dropped implicitly. Call `AsyncDropper::finish` instead."
             );
         }
     }
